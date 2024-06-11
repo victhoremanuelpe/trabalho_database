@@ -1,0 +1,100 @@
+-- MySQL Workbench Forward Engineering
+
+SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0;
+SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
+SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
+
+-- -----------------------------------------------------
+-- Schema db_modelo_estrela
+-- -----------------------------------------------------
+
+-- -----------------------------------------------------
+-- Schema db_modelo_estrela
+-- -----------------------------------------------------
+CREATE SCHEMA IF NOT EXISTS `db_modelo_estrela` DEFAULT CHARACTER SET utf8 COLLATE utf8_bin ;
+USE `db_modelo_estrela` ;
+
+-- -----------------------------------------------------
+-- Table `db_modelo_estrela`.`dim_prato`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `db_modelo_estrela`.`dim_prato` (
+  `id_dim_prato` INT NOT NULL AUTO_INCREMENT,
+  `nome_prato` VARCHAR(45) NULL,
+  `tipo_prato` VARCHAR(45) NULL,
+  PRIMARY KEY (`id_dim_prato`))
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `db_modelo_estrela`.`dim_data`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `db_modelo_estrela`.`dim_data` (
+  `id_dim_data` INT NOT NULL AUTO_INCREMENT,
+  `ano` INT NULL,
+  `mes` INT NULL,
+  `dia` INT NULL,
+  PRIMARY KEY (`id_dim_data`))
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `db_modelo_estrela`.`fato_pedido`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `db_modelo_estrela`.`fato_pedido` (
+  `id_fato_pedido` INT NOT NULL AUTO_INCREMENT,
+  `valor_total_pedido` DECIMAL(10) NULL,
+  `valor_unitario_prato` DECIMAL(10) NULL,
+  `quantidade_prato` INT NULL,
+  `num_pessoas_mesa` INT NULL,
+  `id_prato` INT NULL,
+  `id_cliente` INT NULL,
+  `id_data` INT NULL,
+  `dim_prato_id_dim_prato` INT NOT NULL,
+  `dim_data_id_dim_data` INT NOT NULL,
+   FOREIGN KEY (`id_prato`)
+        REFERENCES `dim_prato` (`id_dim_prato`),
+         FOREIGN KEY (`id_data`)
+        REFERENCES `dim_data` (`id_dim_data`),
+         FOREIGN KEY (`id_cliente`)
+        REFERENCES `dim_cliente` (`id_dim_cliente`),
+  PRIMARY KEY (`id_fato_pedido`),
+  INDEX `fk_fato_pedido_dim_prato_idx` (`dim_prato_id_dim_prato` ASC) VISIBLE,
+  INDEX `fk_fato_pedido_dim_data1_idx` (`dim_data_id_dim_data` ASC) VISIBLE,
+  CONSTRAINT `fk_fato_pedido_dim_prato`
+    FOREIGN KEY (`dim_prato_id_dim_prato`)
+    REFERENCES `db_modelo_estrela`.`dim_prato` (`id_dim_prato`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION,
+  CONSTRAINT `fk_fato_pedido_dim_data1`
+    FOREIGN KEY (`dim_data_id_dim_data`)
+    REFERENCES `db_modelo_estrela`.`dim_data` (`id_dim_data`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+
+-- -----------------------------------------------------
+-- Table `db_modelo_estrela`.`dim_cliente`
+-- -----------------------------------------------------
+CREATE TABLE IF NOT EXISTS `db_modelo_estrela`.`dim_cliente` (
+  `id_dim_cliente` INT NOT NULL AUTO_INCREMENT,
+  `cpf` VARCHAR(20) NULL,
+  `nome` VARCHAR(45) NULL,
+  `email` VARCHAR(45) NULL,
+  `telefone` VARCHAR(20) NULL,
+  `beneficiario` VARCHAR(5) NULL,
+  `nome_empresa` VARCHAR(45) NULL,
+  `fato_pedido_id_fato_pedido` INT NOT NULL,
+  PRIMARY KEY (`id_dim_cliente`),
+  INDEX `fk_dim_cliente_fato_pedido1_idx` (`fato_pedido_id_fato_pedido` ASC) VISIBLE,
+  CONSTRAINT `fk_dim_cliente_fato_pedido1`
+    FOREIGN KEY (`fato_pedido_id_fato_pedido`)
+    REFERENCES `db_modelo_estrela`.`fato_pedido` (`id_fato_pedido`)
+    ON DELETE NO ACTION
+    ON UPDATE NO ACTION)
+ENGINE = InnoDB;
+
+
+SET SQL_MODE=@OLD_SQL_MODE;
+SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
+SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;

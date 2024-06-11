@@ -1,0 +1,218 @@
+CREATE DATABASE `db_restaurante` /*!40100 DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci */ /*!80016 DEFAULT ENCRYPTION='N' */;
+
+USE `db_restaurante`;
+
+CREATE TABLE `tb_cliente` (
+    `id_cliente` INT NOT NULL AUTO_INCREMENT,
+    `cpf_cliente` VARCHAR(14) NOT NULL,
+    `nome_cliente` VARCHAR(150) NOT NULL,
+    `email_cliente` VARCHAR(45) DEFAULT NULL,
+    `telefone_cliente` VARCHAR(45) DEFAULT NULL,
+    PRIMARY KEY (`id_cliente`)
+)  ENGINE=INNODB AUTO_INCREMENT=128 DEFAULT CHARSET=UTF8MB4 COLLATE = UTF8MB4_0900_AI_CI;
+
+
+CREATE TABLE `tb_mesa` (
+    `codigo_mesa` INT NOT NULL AUTO_INCREMENT,
+    `id_cliente` INT NOT NULL,
+    `num_pessoa_mesa` INT NOT NULL DEFAULT '1',
+    `data_hora_entrada` DATETIME DEFAULT NULL,
+    `data_hora_saida` DATETIME DEFAULT NULL,
+    PRIMARY KEY (`codigo_mesa`),
+    KEY `fk_cliente_idx` (`id_cliente`),
+    CONSTRAINT `fk_cliente` FOREIGN KEY (`id_cliente`)
+        REFERENCES `tb_cliente` (`id_cliente`)
+)  ENGINE=INNODB AUTO_INCREMENT=16384 DEFAULT CHARSET=UTF8MB4 COLLATE = UTF8MB4_0900_AI_CI;
+
+CREATE TABLE `tb_tipo_prato` (
+    `codigo_tipo_prato` INT NOT NULL AUTO_INCREMENT,
+    `nome_tipo_prato` VARCHAR(45) NOT NULL,
+    PRIMARY KEY (`codigo_tipo_prato`)
+)  ENGINE=INNODB AUTO_INCREMENT=5 DEFAULT CHARSET=UTF8MB4 COLLATE = UTF8MB4_0900_AI_CI;
+
+
+CREATE TABLE `tb_situacao_pedido` (
+    `codigo_situacao_pedido` INT NOT NULL AUTO_INCREMENT,
+    `nome_situacao_pedido` VARCHAR(45) NOT NULL,
+    PRIMARY KEY (`codigo_situacao_pedido`)
+)  ENGINE=INNODB AUTO_INCREMENT=4 DEFAULT CHARSET=UTF8MB4 COLLATE = UTF8MB4_0900_AI_CI;
+
+
+CREATE TABLE `tb_prato` (
+    `codigo_prato` INT NOT NULL AUTO_INCREMENT,
+    `codigo_tipo_prato` INT NOT NULL,
+    `nome_prato` VARCHAR(45) NOT NULL,
+    `preco_unitario_prato` DOUBLE NOT NULL,
+    PRIMARY KEY (`codigo_prato`),
+    KEY `fk_tipo_prato_idx` (`codigo_tipo_prato`),
+    CONSTRAINT `fk_tipo_prato` FOREIGN KEY (`codigo_tipo_prato`)
+        REFERENCES `tb_tipo_prato` (`codigo_tipo_prato`)
+)  ENGINE=INNODB AUTO_INCREMENT=1024 DEFAULT CHARSET=UTF8MB4 COLLATE = UTF8MB4_0900_AI_CI;
+
+CREATE TABLE `tb_pedido` (
+    `codigo_mesa` INT NOT NULL,
+    `codigo_prato` INT NOT NULL,
+    `quantidade_pedido` VARCHAR(45) NOT NULL,
+    `codigo_situacao_pedido` INT NOT NULL,
+    KEY `fk_situacao_pedido_idx` (`codigo_situacao_pedido`),
+    KEY `fk_mesa_idx` (`codigo_mesa`),
+    KEY `fk_prato_idx` (`codigo_prato`),
+    CONSTRAINT `fk_mesa` FOREIGN KEY (`codigo_mesa`)
+        REFERENCES `tb_mesa` (`codigo_mesa`),
+    CONSTRAINT `fk_prato` FOREIGN KEY (`codigo_prato`)
+        REFERENCES `tb_prato` (`codigo_prato`),
+    CONSTRAINT `fk_situacao_pedido` FOREIGN KEY (`codigo_situacao_pedido`)
+        REFERENCES `tb_situacao_pedido` (`codigo_situacao_pedido`)
+)  ENGINE=INNODB DEFAULT CHARSET=UTF8MB4 COLLATE = UTF8MB4_0900_AI_CI;
+
+CREATE TABLE tabela_beneficio (
+    codigo_funcionario INT,
+    email_funcionario VARCHAR(200),
+    codigo_beneficio INT,
+    codigo_empresa INT,
+    tipo_beneficio VARCHAR(45),
+    valor_beneficio VARCHAR(45)
+);
+
+CREATE TABLE tb_empresa (
+    codigo_empresa INT,
+    nome_empresa VARCHAR(500),
+    uf_sede_empresa VARCHAR(2)
+);
+
+select count(*) from tb_cliente;
+-- 100
+select count(*) from tb_mesa;
+-- 10000
+select count(*) from tb_situacao_pedido;
+-- 3
+select count(*) from tb_tipo_prato;
+-- 4
+select count(*) from tb_prato;
+-- 1000
+select count(*) from tb_pedido;
+-- 20000
+select count(*) from tabela_beneficio;
+-- 10000
+select count(*) from tb_empresa;
+-- 8
+
+# Qual o cliente que mais fez pedidos por ano
+
+SELECT 
+    YEAR(data_hora_entrada) AS ano,
+    c.nome_cliente,
+    COUNT(*) AS total_pedidos
+FROM
+    tb_pedido p
+        INNER JOIN
+    tb_mesa m ON p.codigo_mesa = m.codigo_mesa
+        INNER JOIN
+    tb_cliente c ON m.id_cliente = c.id_cliente
+GROUP BY YEAR(data_hora_entrada) , c.nome_cliente
+ORDER BY YEAR(data_hora_entrada) DESC , total_pedidos DESC
+LIMIT 1;
+
+# Qual o cliente que mais gastou em todos os anos
+
+SELECT 
+    c.nome_cliente,
+    SUM(pr.preco_unitario_prato * CAST(quantidade_pedido AS DECIMAL)) AS total_gasto
+FROM
+    tb_pedido ped
+        INNER JOIN
+    tb_mesa m ON ped.codigo_mesa = m.codigo_mesa
+        INNER JOIN
+    tb_cliente c ON m.id_cliente = c.id_cliente
+        INNER JOIN
+    tb_prato pr ON ped.codigo_prato = pr.codigo_prato
+        INNER JOIN
+    tb_tipo_prato tp ON pr.codigo_tipo_prato = tp.codigo_tipo_prato
+WHERE
+    YEAR(m.data_hora_entrada) IN (2024,2023,2022)
+GROUP BY c.nome_cliente
+ORDER BY total_gasto DESC
+LIMIT 3;
+
+# Qual(is) o(s) cliente(s) que trouxe(ram) mais pessoas por ano
+-- ingual o seu 7w7
+
+SELECT 
+    *
+FROM
+    ((SELECT 
+        YEAR(ms.data_hora_entrada) AS ano,
+            cl.nome_cliente AS cliente,
+            SUM(ms.num_pessoa_mesa) AS qtd_pessoas
+    FROM
+        tb_mesa ms
+    LEFT JOIN tb_cliente cl ON ms.id_cliente = cl.id_cliente
+    WHERE
+        YEAR(ms.data_hora_entrada) = 2022
+    GROUP BY 1 , 2
+    ORDER BY 3 DESC
+    LIMIT 10) UNION (SELECT 
+        YEAR(ms.data_hora_entrada) AS ano,
+            cl.nome_cliente AS cliente,
+            SUM(ms.num_pessoa_mesa) AS qtd_pessoas
+    FROM
+        tb_mesa ms
+    LEFT JOIN tb_cliente cl ON ms.id_cliente = cl.id_cliente
+    WHERE
+        YEAR(ms.data_hora_entrada) = 2023
+    GROUP BY 1 , 2
+    ORDER BY 3 DESC
+    LIMIT 10) UNION (SELECT 
+        YEAR(ms.data_hora_entrada) AS ano,
+            cl.nome_cliente AS cliente,
+            SUM(ms.num_pessoa_mesa) AS qtd_pessoas
+    FROM
+        tb_mesa ms
+    LEFT JOIN tb_cliente cl ON ms.id_cliente = cl.id_cliente
+    WHERE
+        YEAR(ms.data_hora_entrada) = 2024
+    GROUP BY 1 , 2
+    ORDER BY 3 DESC
+    LIMIT 3)) AS tb_top10_major_consumer_per_year;
+    
+# Qual a empresa que tem mais funcionarios como clientes do restaurante
+
+SELECT 
+    e.nome_empresa,
+    COUNT(DISTINCT tb.codigo_funcionario) AS total_funcionarios
+FROM
+    tb_empresa e
+        INNER JOIN
+    tabela_beneficio tb ON e.codigo_empresa = tb.codigo_empresa
+GROUP BY e.nome_empresa
+ORDER BY total_funcionarios DESC
+LIMIT 1;
+
+# Qual empresa que tem mais funcionarios que consomem sobremesas no restaurante por ano
+
+SELECT 
+    e.nome_empresa,
+    YEAR(data_hora_entrada) AS ano,
+    COUNT(DISTINCT tb.codigo_funcionario) AS total_funcionarios_sobremesa
+FROM
+    tb_empresa e
+INNER JOIN
+    tabela_beneficio tb ON e.codigo_empresa = tb.codigo_empresa
+INNER JOIN
+    tb_mesa m ON tb.codigo_funcionario = m.id_cliente
+INNER JOIN
+    tb_pedido ped ON m.codigo_mesa = ped.codigo_mesa
+INNER JOIN
+    tb_prato pr ON ped.codigo_prato = pr.codigo_prato
+INNER JOIN
+    tb_tipo_prato tp ON pr.codigo_tipo_prato = tp.codigo_tipo_prato
+WHERE
+    tp.nome_tipo_prato = 'Sobremesa'
+    AND YEAR(data_hora_entrada) IN (2024, 2023, 2022)
+GROUP BY
+    e.nome_empresa , YEAR(data_hora_entrada)
+ORDER BY
+    total_funcionarios_sobremesa DESC
+LIMIT 3;
+
+
